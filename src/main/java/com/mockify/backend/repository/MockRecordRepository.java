@@ -6,22 +6,20 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface MockRecordRepository extends JpaRepository<MockRecord, Long> {
 
-    // Find records under a schema
-    List<MockRecord> findByMockSchemaId(Long mockSchemaId);
+    List<MockRecord> findByMockSchema_Id(Long schemaId);
 
-    // Find active (non-expired) records
-    List<MockRecord> findByMockSchemaIdAndExpiresAtAfter(Long mockSchemaId, LocalDateTime now);
+    List<MockRecord> findByMockSchema_IdAndExpiresAtAfter(Long schemaId, LocalDateTime now);
 
-    // Delete expired records
+    Optional<MockRecord> findByIdAndMockSchema_Id(Long id, Long schemaId);
+
     void deleteByExpiresAtBefore(LocalDateTime now);
 
-    // Delete records under a schema
-    void deleteByMockSchemaId(Long mockSchemaId);
+    void deleteByMockSchema_Id(Long schemaId);
 
-    // Count all records
     long count();
 }
