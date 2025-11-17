@@ -11,14 +11,19 @@ import java.util.Optional;
 @Repository
 public interface MockRecordRepository extends JpaRepository<MockRecord, Long> {
 
-    List<MockRecord> findByMockSchema_Id(Long schemaId);
-
     List<MockRecord> findByMockSchema_IdAndExpiresAtAfter(Long schemaId, LocalDateTime now);
 
     Optional<MockRecord> findByIdAndMockSchema_Id(Long id, Long schemaId);
 
     void deleteByExpiresAtBefore(LocalDateTime now);
 
+    // Get all records under a schema
+    List<MockRecord> findByMockSchema_Id(Long schemaId);
+
+    // Find expired records before given time
+    List<MockRecord> findByExpiresAtBefore(LocalDateTime now);
+
+    // Delete all records under a schema
     void deleteByMockSchema_Id(Long schemaId);
 
     long count();
