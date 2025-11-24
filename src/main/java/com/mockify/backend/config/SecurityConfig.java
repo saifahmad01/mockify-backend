@@ -1,8 +1,6 @@
 package com.mockify.backend.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.mockify.backend.security.CustomAuthenticationEntryPoint;
 import com.mockify.backend.security.JwtAuthenticationFilter;
 import com.mockify.backend.security.oauth2.CustomOAuth2UserService;
 import com.mockify.backend.security.oauth2.OAuth2AuthenticationSuccessHandler;
@@ -31,6 +29,7 @@ import java.util.Arrays;
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -42,15 +41,6 @@ public class SecurityConfig {
             AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
     }
-
-    @Bean
-    public ObjectMapper objectMapper() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        return mapper;
-    }
-
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -74,8 +64,18 @@ public class SecurityConfig {
                         .requestMatchers("/login/oauth2/**").permitAll()
                         .requestMatchers("/.well-known/**").permitAll()
 
+                        // OAuth2 endpoints must be public for the handshake
+                        .requestMatchers("/oauth2/**").permitAll()
+                        .requestMatchers("/login/oauth2/**").permitAll()
+                        .requestMatchers("/.well-known/**").permitAll()
+
                         // All other endpoints require authentication
                         .anyRequest().authenticated()
+                )
+
+                // If a request is unauthorized, don’t redirect just send a 401 JSON response.
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(customAuthenticationEntryPoint)
                 )
 
                 // OAuth2 login config (user service + success handler)
