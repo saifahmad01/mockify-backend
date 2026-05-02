@@ -92,6 +92,28 @@ class OrganizationMemberServiceIntegrationTest {
                 () -> memberService.changeMemberRole(member.getId(), org.getId(), owner.getId(), req));
     }
 
+    @Test
+    void owner_cannot_change_own_role() {
+        ChangeMemberRoleRequest req = new ChangeMemberRoleRequest();
+        req.setRole(MemberRole.ADMIN);
+        assertThrows(BadRequestException.class,
+                () -> memberService.changeMemberRole(
+                        owner.getId(), org.getId(), owner.getId(), req));
+    }
+
+    @Test
+    void admin_cannot_change_own_role() {
+        memberRepo.save(OrganizationMember.builder()
+                .organization(org).user(member).role(MemberRole.ADMIN)
+                .joinedAt(LocalDateTime.now()).build());
+
+        ChangeMemberRoleRequest req = new ChangeMemberRoleRequest();
+        req.setRole(MemberRole.DEVELOPER);
+        assertThrows(BadRequestException.class,
+                () -> memberService.changeMemberRole(
+                        member.getId(), org.getId(), member.getId(), req));
+    }
+
     // ── removeMember ──────────────────────────────────────────────────────────
 
     @Test
@@ -154,6 +176,14 @@ class OrganizationMemberServiceIntegrationTest {
         req.setNewOwnerId(owner.getId());
         assertThrows(ForbiddenException.class,
                 () -> memberService.transferOwnership(member.getId(), org.getId(), req));
+    }
+
+    @Test
+    void transfer_to_self_throws_bad_request() {
+        TransferOwnershipRequest req = new TransferOwnershipRequest();
+        req.setNewOwnerId(owner.getId());
+        assertThrows(BadRequestException.class,
+                () -> memberService.transferOwnership(owner.getId(), org.getId(), req));
     }
 
     // ── acceptInvitation token hashing ────────────────────────────────────────

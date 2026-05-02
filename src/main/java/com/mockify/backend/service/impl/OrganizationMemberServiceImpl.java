@@ -169,9 +169,14 @@ public class OrganizationMemberServiceImpl implements OrganizationMemberService 
     @Override
     @Transactional
     public MemberResponse changeMemberRole(UUID actorId, UUID orgId,
-                                           UUID targetUserId, ChangeMemberRoleRequest request) {
-        MemberRole actorRole = resolveRole(actorId, orgId);
+                                           UUID targetUserId,
+                                           ChangeMemberRoleRequest request) {
+        // Guard: actors cannot modify their own role
+        if (actorId.equals(targetUserId)) {
+            throw new BadRequestException("You cannot change your own role");
+        }
 
+        MemberRole actorRole = resolveRole(actorId, orgId);
         OrganizationMember target = memberRepo
                 .findByOrganizationIdAndUserId(orgId, targetUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Member not found"));
@@ -180,7 +185,8 @@ public class OrganizationMemberServiceImpl implements OrganizationMemberService 
             throw new ForbiddenException("You cannot change the role of this member");
         }
         if (!actorRole.canInviteAs(request.getRole())) {
-            throw new ForbiddenException("You cannot assign a role equal to or above your own");
+            throw new ForbiddenException(
+                    "You cannot assign a role equal to or above your own");
         }
 
         target.setRole(request.getRole());
@@ -254,8 +260,13 @@ public class OrganizationMemberServiceImpl implements OrganizationMemberService 
     @Transactional
     public void transferOwnership(UUID currentOwnerId, UUID orgId,
                                   TransferOwnershipRequest request) {
-        MemberRole actorRole = resolveRole(currentOwnerId, orgId);
+        // reject self-transfer
+        if (request.getNewOwnerId().equals(currentOwnerId)) {
+            throw new BadRequestException(
+                    "You are already the owner of this organization");
+        }
 
+        MemberRole actorRole = resolveRole(currentOwnerId, orgId);
         if (actorRole != MemberRole.OWNER) {
             throw new ForbiddenException("Only the current OWNER can transfer ownership");
         }
@@ -267,7 +278,9 @@ public class OrganizationMemberServiceImpl implements OrganizationMemberService 
 
         OrganizationMember currentOwner = memberRepo
                 .findByOrganizationIdAndUserId(orgId, currentOwnerId)
-                .orElseThrow();
+                .orElseThrow(() -> new IllegalStateException(
+                        "OWNER member row missing for user " + currentOwnerId
+                                + " in org " + orgId + " — data integrity violation"));
 
         // saveAndFlush the demotion first
         currentOwner.setRole(MemberRole.ADMIN);
