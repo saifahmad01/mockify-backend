@@ -132,6 +132,27 @@ class OrganizationMemberControllerTest {
                 .andExpect(status().isNoContent());
     }
 
+    @Test
+    void accept_invitation_with_blank_token_returns_400() throws Exception {
+        String inviteeJwt = jwtTokenProvider
+                .generateAccessToken(dev.getId(), UserRole.USER);
+
+        mockMvc.perform(post("/api/invitations/accept")
+                        .param("token", "   ")   // blank — should fail @NotBlank
+                        .header("Authorization", "Bearer " + inviteeJwt))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void accept_invitation_rejects_api_key_callers() throws Exception {
+        mockMvc.perform(post("/api/invitations/accept")
+                        .param("token", "sometoken")
+                        .header("X-API-Key",
+                                "mk_live_fakekeyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"))
+                .andExpect(status().is4xxClientError());
+    }
+
+    // HELPERS
     private User buildUser(String email) {
         User u = new User(); u.setName("Test"); u.setEmail(email);
         u.setPassword("hashed"); u.setProviderName("local"); u.setEmailVerified(true);

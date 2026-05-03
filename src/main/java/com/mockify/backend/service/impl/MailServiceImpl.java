@@ -85,8 +85,22 @@ public class MailServiceImpl implements MailService {
         }
     }
 
+    private static String escapeHtml(String input) {
+        if (input == null) return "";
+        return input
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#x27;");
+    }
+
     private String buildInviteHtml(String orgName, String inviterName,
                                    String role, String acceptLink) {
+        String safeOrg     = escapeHtml(orgName);
+        String safeInviter = escapeHtml(inviterName);
+        String safeRole    = escapeHtml(role);
+
         return """
         <div style="background:#f6f8fa;padding:40px 0;font-family:-apple-system,sans-serif;">
           <table align="center" width="100%%" cellpadding="0" cellspacing="0"
@@ -116,7 +130,7 @@ public class MailServiceImpl implements MailService {
             </td></tr>
           </table>
         </div>
-    """.formatted(orgName, inviterName, orgName, role, acceptLink);
+    """.formatted(safeOrg, safeInviter, safeOrg, safeRole, acceptLink);
     }
 
     private String buildVerificationHtml(String verificationLink) {
