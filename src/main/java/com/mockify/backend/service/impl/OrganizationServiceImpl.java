@@ -11,6 +11,7 @@ import com.mockify.backend.exception.DuplicateResourceException;
 import com.mockify.backend.exception.ResourceNotFoundException;
 import com.mockify.backend.mapper.OrganizationMapper;
 import com.mockify.backend.model.Organization;
+import com.mockify.backend.model.OrganizationMember;
 import com.mockify.backend.model.User;
 import com.mockify.backend.repository.OrganizationMemberRepository;
 import com.mockify.backend.repository.OrganizationRepository;
@@ -72,6 +73,15 @@ public class OrganizationServiceImpl implements OrganizationService {
 
         Organization saved = organizationRepository.save(organization);
         endpointService.createEndpoint(saved);
+
+        OrganizationMember ownerMember = OrganizationMember.builder()
+                .organization(saved)
+                .user(user)
+                .role(MemberRole.OWNER)
+                .joinedAt(saved.getCreatedAt())
+                .build();
+        memberRepository.save(ownerMember);
+
 
         log.info("Organization '{}' created by user {}", saved.getName(), userId);
         return organizationMapper.toResponse(saved);
