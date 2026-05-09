@@ -1,5 +1,6 @@
 package com.mockify.backend.service.impl;
 
+import com.mockify.backend.common.enums.MemberRole;
 import com.mockify.backend.common.validation.PageableValidator;
 import com.mockify.backend.dto.request.organization.CreateOrganizationRequest;
 import com.mockify.backend.dto.request.organization.UpdateOrganizationRequest;
@@ -10,7 +11,9 @@ import com.mockify.backend.exception.DuplicateResourceException;
 import com.mockify.backend.exception.ResourceNotFoundException;
 import com.mockify.backend.mapper.OrganizationMapper;
 import com.mockify.backend.model.Organization;
+import com.mockify.backend.model.OrganizationMember;
 import com.mockify.backend.model.User;
+import com.mockify.backend.repository.OrganizationMemberRepository;
 import com.mockify.backend.repository.OrganizationRepository;
 import com.mockify.backend.repository.UserRepository;
 import com.mockify.backend.service.EndpointService;
@@ -37,6 +40,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     private final OrganizationMapper organizationMapper;
     private final SlugService slugService;
     private final EndpointService endpointService;
+    private final OrganizationMemberRepository memberRepository;
 
     // Create new organization under current user
     // The JWT-only guard at the controller (requireJwtAuthentication) is sufficient.
@@ -70,6 +74,15 @@ public class OrganizationServiceImpl implements OrganizationService {
         Organization saved = organizationRepository.save(organization);
         endpointService.createEndpoint(saved);
 
+        OrganizationMember ownerMember = OrganizationMember.builder()
+                .organization(saved)
+                .user(user)
+                .role(MemberRole.OWNER)
+                .joinedAt(saved.getCreatedAt())
+                .build();
+        memberRepository.save(ownerMember);
+
+
         log.info("Organization '{}' created by user {}", saved.getName(), userId);
         return organizationMapper.toResponse(saved);
     }
@@ -95,7 +108,15 @@ public class OrganizationServiceImpl implements OrganizationService {
 
         Organization organization = organizationRepository.findByIdWithOwnerAndProjects(orgId)
                 .orElseThrow(() -> new ResourceNotFoundException("Organization not found with id: " + orgId));
-        return organizationMapper.toDetailResponse(organization);
+
+        OrganizationDetailResponse response = organizationMapper.toDetailResponse(organization);
+
+        MemberRole userRole = memberRepository
+                .findRoleByOrganizationIdAndUserId(orgId, userId)
+                .orElse(MemberRole.VIEWER);
+        response.setUserRole(userRole);
+
+        return response;
     }
 
     // Returns only the caller's own orgs — no cross-org risk, no guard needed.

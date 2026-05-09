@@ -17,6 +17,7 @@ public interface OrganizationMapper {
     @Mapping(target = "ownerId", source = "owner.id")
     @Mapping(target = "ownerName", source = "owner.name")
     @Mapping(target = "projectCount", expression = "java(organization.getProjects().size())")
+    @Mapping(target = "userRole", ignore = true)
     OrganizationResponse toResponse(Organization organization);
 
     List<OrganizationResponse> toResponseList(List<Organization> organizations);
@@ -24,6 +25,7 @@ public interface OrganizationMapper {
     // Detailed response with owner & projects
     @Mapping(target = "owner", source = "owner")
     @Mapping(target = "projects", source = "projects")
+    @Mapping(target = "userRole", ignore = true)
     OrganizationDetailResponse toDetailResponse(Organization organization);
 
     // Project summary for nested response
